@@ -1,0 +1,43 @@
+
+from datetime import datetime, timedelta
+import random
+from .database import get_db, SessionLocal
+from .models import WeatherRecord
+def generate_history(city: str, days: int, user_id: int):
+    db = SessionLocal()
+    try:
+        end_date = datetime.utcnow()
+        start_date = end_date - timedelta(days=days)
+
+        # Get existing dates for the user
+        existing_dates = {rec.timestamp.date() for rec in 
+            db.query(WeatherRecord).filter(
+                WeatherRecord.city == city,
+                WeatherRecord.timestamp >= start_date,
+                WeatherRecord.user_id == user_id  # Filter by user
+            ).all()
+        }
+
+        current_date = start_date
+        while current_date <= end_date:
+            if current_date.date() not in existing_dates:
+                weather_data = {
+                    "city": city,
+                    "temperature": round(random.uniform(25, 40), 2),
+                    "humidity": random.randint(10, 80),
+                    "description": random.choice([
+                        "clear sky", "few clouds", "overcast clouds", 
+                        "smoke", "broken clouds", "scattered clouds", "rain"
+                    ]),
+                    "timestamp": current_date.replace(
+                        hour=12, minute=0, second=0, microsecond=0
+                    ),
+                    "user_id": user_id  # Associate with user
+                }
+                
+                db.add(WeatherRecord(**weather_data))
+            current_date += timedelta(days=1)
+        
+        db.commit()
+    finally:
+        db.close()

@@ -1,0 +1,9 @@
+fastapi==0.115.11
+jose==1.0.0
+passlib==1.7.4
+pydantic==1.10.12
+python-dotenv==1.0.1
+redis==4.5.0
+Requests==2.32.3
+slowapi==0.1.9
+SQLAlchemy==2.0.20
