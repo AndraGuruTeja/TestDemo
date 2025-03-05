@@ -19,7 +19,7 @@ from dotenv import load_dotenv
 from .data import generate_history
 from .models import WeatherRecord, User
 import os
-
+from sqlalchemy.orm import declarative_base
 
 
 
@@ -150,7 +150,7 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: Session = De
     return user
 
 # Weather endpoints
-@app.get("/weather/{city}", response_model=WeatherResponse, dependencies=[Depends(RateLimiter(times=5, seconds=60))])
+@app.get("/weather/{city}", response_model=WeatherResponse, dependencies=[Depends(RateLimiter(times=10, seconds=60))])
 async def get_weather(
     city: str,
     db: Session = Depends(get_db),

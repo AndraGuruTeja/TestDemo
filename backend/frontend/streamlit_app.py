@@ -2,8 +2,8 @@ import streamlit as st
 import requests
 import pandas as pd
 import plotly.express as px
-import plotly.graph_objects as go
 import time
+from datetime import datetime
 
 # FastAPI backend URL
 BACKEND_URL = "http://localhost:8000"
@@ -53,11 +53,13 @@ def signup(username, password):
 
 # Function to logout
 def logout():
-    st.session_state['token'] = None
-    st.session_state['page'] = 'login'
-    st.session_state['city'] = None
-    st.session_state['username'] = None
-    st.success("Logged out successfully!")
+    st.session_state.update({
+        'token': None,
+        'page': 'login',
+        'city': None,
+        'username': None
+    })
+    st.experimental_rerun()
 
 # Function to get weather data
 def get_weather(city):
@@ -69,7 +71,7 @@ def get_weather(city):
     if response.status_code == 200:
         return response.json()
     else:
-        st.error("Failed to fetch weather data")
+        st.error("Too Many Requests! Please try again after 1 minute.")
         return None
 
 # Function to get historical weather data
@@ -83,7 +85,7 @@ def get_history(city, days=7):
     if response.status_code == 200:
         return response.json()
     else:
-        st.error("Failed to fetch historical weather data")
+        st.error("Too Many Requests! Please try again after 1 minute")
         return None
 
 # Function to get weather trends
@@ -97,12 +99,25 @@ def get_trends(city, days=7):
     if response.status_code == 200:
         return response.json()
     else:
-        st.error("Failed to fetch weather trends")
+        st.error("Too Many Requests! Please try again after 1 minute")
         return None
 
-# Login Page
+# Login Page with Attractive Cards
 def login_page():
-    st.title("Login")
+    st.title("Welcome to Weather Dashboard 🌦️")
+    st.markdown("""
+        <div style="
+            padding: 2rem;
+            margin: 1rem 0;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #6B8DD6 0%, #8E37D7 100%);
+            color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        ">
+            <h2 style="margin: 0; font-size: 2rem;">Login to Access Weather Data</h2>
+        </div>
+    """, unsafe_allow_html=True)
+
     username = st.text_input("Email or Username")
     password = st.text_input("Password", type="password", key="login_password")
     if st.button("Login", key="login_button"):
@@ -112,7 +127,20 @@ def login_page():
             if login(username, password):
                 st.rerun()
 
-    if st.button("Don't have an account? Signup", key="signup_button"):
+    st.markdown("""
+        <div style="
+            padding: 1rem;
+            margin: 1rem 0;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #4CAF50 0%, #81C784 100%);
+            color: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        ">
+            <h2 style="margin: 0; font-size: 1.5rem;">Don't have an account? Signup now!</h2>
+        </div>
+    """, unsafe_allow_html=True)
+
+    if st.button("Signup", key="signup_button"):
         st.session_state['page'] = 'signup'
         st.rerun()
 
@@ -134,90 +162,130 @@ def signup_page():
 
 # Weather Page
 def weather_page():
-    st.title("Weather Information")
+    st.title("🌦️ Weather Dashboard")
 
-    # User icon and logout option in the top-right corner
-    col1, col2 = st.columns([10, 2])
+    # User info and logout in top-right
+    col1, col2 = st.columns([8, 2])
     with col2:
-        if st.button("👤"):
-            st.write(f"Logged in as: {st.session_state['username']}")
-            if st.button("Logout"):
-                logout()
-                st.rerun()
+        if st.button("Logout", key="logout_button"):
+            logout()
 
-    # Search bar and Enter button
-    city = st.text_input("Enter city name", key="city_input", value=st.session_state.get('city', ''))
+    # Search bar with auto-focus
+    city = st.text_input("Search City", 
+                         key="city_input", 
+                         value=st.session_state.get('city', ''),
+                         help="Enter a city name to get weather information")
+    
+    # Update city on Enter button click
     if st.button("Enter", key="enter_button"):
         if city:
             st.session_state['city'] = city
         else:
             st.error("City name is required")
 
-    # Automatically fetch and display weather data when city is entered
+    # Weather Card Design
     if st.session_state['city']:
-        with st.spinner("Fetching weather data..."):
+        with st.spinner("Fetching latest weather data..."):
             weather_data = get_weather(st.session_state['city'])
             if weather_data:
-                with st.container():
-                    st.markdown(
-                        f"""
-                        <div style="padding: 10px; border-radius: 10px; box-shadow: 0 4px 8px 0 rgba(0, 0, 0, 0.2);">
-                            <h3>🌤️ Weather in {weather_data['city']}</h3>
-                            <p><b>Temperature:</b> {weather_data['temperature']}°C</p>
-                            <p><b>Humidity:</b> {weather_data['humidity']}%</p>
-                            <p><b>Description:</b> {weather_data['description']}</p>
-                            <p><b>Cached:</b> {weather_data['cached']}</p>
+                # Determine weather icon based on description
+                weather_icons = {
+                    "clear sky": "☀️",
+                    "few clouds": "⛅",
+                    "scattered clouds": "☁️",
+                    "broken clouds": "☁️☁️",
+                    "overcast clouds": "☁️☁️☁️",
+                    "rain": "🌧️",
+                    "smoke": "🌫️"
+                }
+                icon = weather_icons.get(weather_data['description'].lower(), "🌍")
+                
+                st.markdown(f"""
+                    <div style="
+                        padding: 2rem;
+                        margin: 1rem 0;
+                        border-radius: 15px;
+                        background: linear-gradient(135deg, #6B8DD6 0%, #8E37D7 100%);
+                        color: white;
+                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    ">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <h2 style="margin: 0; font-size: 2.5rem;">{weather_data['city']}</h2>
+                                <p style="margin: 0; font-size: 1.2rem;">{weather_data['description'].title()}</p>
+                            </div>
+                            <div style="font-size: 4rem;">{icon}</div>
                         </div>
-                        """,
-                        unsafe_allow_html=True
-                    )
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 2rem;">
+                            <div style="text-align: center;">
+                                <div style="font-size: 2.5rem; font-weight: bold;">{weather_data['temperature']}°C</div>
+                                <div style="opacity: 0.8;">Temperature</div>
+                            </div>
+                            <div style="text-align: center;">
+                                <div style="font-size: 2.5rem; font-weight: bold;">{weather_data['humidity']}%</div>
+                                <div style="opacity: 0.8;">Humidity</div>
+                            </div>
+                        </div>
+                        <div style="margin-top: 1rem; text-align: right; font-size: 0.9rem; opacity: 0.8;">
+                            {'Cached data' if weather_data['cached'] else 'Live data'} • Updated {datetime.now().strftime('%H:%M')}
+                        </div>
+                    </div>
+                """, unsafe_allow_html=True)
 
-    # Dropdown for days selection
-    days_history = st.selectbox("Select days for history", [7, 14, 30], key="days_history")
-    days_trends = st.selectbox("Select days for trends", [7, 14, 30], key="days_trends")
+    # Historical and Trends Section
+    if st.session_state['city']:
+        days_filter = st.selectbox("Select Date Range", [7, 14, 30], 
+                                  key="days_filter", 
+                                  help="Select number of days to view historical data")
 
-    # Historical Data and Trends side by side
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.session_state['city']:
-            with st.expander("📅 Historical Weather Data"):
-                history_data = get_history(st.session_state['city'], days_history)
-                if history_data:
-                    df_history = pd.DataFrame(history_data)
-                    st.write(df_history)
+        # Historical Data Card
+        with st.spinner("Fetching historical data..."):
+            history_data = get_history(st.session_state['city'], days_filter)
+            if history_data:
+                st.markdown(f"""
+                    <div style="
+                        padding: 1rem;
+                        margin: 1rem 0;
+                        border-radius: 15px;
+                        background: linear-gradient(135deg, #4CAF50 0%, #81C784 100%);
+                        color: white;
+                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    ">
+                        <h2 style="margin: 0; font-size: 1.5rem;">📅 Historical Data</h2>
+                    </div>
+                """, unsafe_allow_html=True)
+                df_history = pd.DataFrame(history_data)
+                df_history['timestamp'] = pd.to_datetime(df_history['timestamp']).dt.date
+                st.dataframe(df_history.style.format({
+                    'temperature': '{:.1f}°C',
+                    'humidity': '{:.0f}%'
+                }), use_container_width=True)
 
-    with col2:
-        if st.session_state['city']:
-            with st.expander("📈 Weather Trends"):
-                trends_data = get_trends(st.session_state['city'], days_trends)
-                if trends_data:
-                    df_trends = pd.DataFrame(trends_data)
-                    df_trends['date'] = pd.to_datetime(df_trends['date'])
+        # Trends Data Card
+        with st.spinner("Fetching trends data..."):
+            trends_data = get_trends(st.session_state['city'], days_filter)
+            if trends_data:
+                st.markdown(f"""
+                    <div style="
+                        padding: 1rem;
+                        margin: 1rem 0;
+                        border-radius: 15px;
+                        background: linear-gradient(135deg, #FF9800 0%, #FFB74D 100%);
+                        color: white;
+                        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    ">
+                        <h2 style="margin: 0; font-size: 1.5rem;">📈 Temperature Trends</h2>
+                    </div>
+                """, unsafe_allow_html=True)
+                df_trends = pd.DataFrame(trends_data)
+                df_trends['date'] = pd.to_datetime(df_trends['date']).dt.date
 
-                    # Plotly chart for trends
-                    fig = go.Figure()
-                    fig.add_trace(go.Scatter(
-                        x=df_trends['date'], y=df_trends['avg_temperature'],
-                        mode='lines+markers', name='Avg Temperature',
-                        hoverinfo='x+y', line=dict(color='blue')
-                    ))
-                    fig.add_trace(go.Scatter(
-                        x=df_trends['date'], y=df_trends['max_temperature'],
-                        mode='lines+markers', name='Max Temperature',
-                        hoverinfo='x+y', line=dict(color='red')
-                    ))
-                    fig.add_trace(go.Scatter(
-                        x=df_trends['date'], y=df_trends['min_temperature'],
-                        mode='lines+markers', name='Min Temperature',
-                        hoverinfo='x+y', line=dict(color='green')
-                    ))
-                    fig.update_layout(
-                        title="Temperature Trends",
-                        xaxis_title="Date",
-                        yaxis_title="Temperature (°C)",
-                        hovermode="x unified"
-                    )
-                    st.plotly_chart(fig, use_container_width=True)
+                fig = px.line(df_trends, x='date', y=['avg_temperature', 'max_temperature', 'min_temperature'],
+                             title="Temperature Trends Over Time",
+                             labels={'value': 'Temperature (°C)', 'variable': 'Metric'},
+                             color_discrete_sequence=['#4CAF50', '#FF9800', '#2196F3'])
+                fig.update_layout(hovermode="x unified", plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)')
+                st.plotly_chart(fig, use_container_width=True)
 
 # Main App Logic
 def main():
