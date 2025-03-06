@@ -63,6 +63,9 @@ async def startup():
     redis = await aioredis.from_url(settings.REDIS_URL)
     await FastAPILimiter.init(redis)
 
+
+    
+
 # Dependency for database sessions
 def get_db():
     db = SessionLocal()
@@ -102,7 +105,7 @@ class WeatherTrendResponse(BaseModel):
 async def register(
     user: UserCreate, 
     db: Session = Depends(get_db),
-    rate_limiter: RateLimiter = Depends(RateLimiter(times=10, seconds=60))
+    rate_limiter: RateLimiter = Depends(RateLimiter(times=100, seconds=30))
 ):
     existing_user = db.query(User).filter(User.email == user.email).first()
     if existing_user:
@@ -118,7 +121,7 @@ async def register(
 async def login(
     form_data: OAuth2PasswordRequestForm = Depends(), 
     db: Session = Depends(get_db),
-    rate_limiter: RateLimiter = Depends(RateLimiter(times=10, seconds=60))
+    rate_limiter: RateLimiter = Depends(RateLimiter(times=100, seconds=30))
 ):
     user = db.query(User).filter(User.email == form_data.username).first()
     if not user or not pwd_context.verify(form_data.password, user.hashed_password):
@@ -154,7 +157,7 @@ async def get_current_user(
     return user
 
 # Weather endpoints with unified rate limiting
-@app.get("/weather/{city}", response_model=WeatherResponse, dependencies=[Depends(RateLimiter(times=100, seconds=60))])
+@app.get("/weather/{city}", response_model=WeatherResponse, dependencies=[Depends(RateLimiter(times=100, seconds=30))])
 async def get_weather(
     city: str,
     db: Session = Depends(get_db),
@@ -200,7 +203,7 @@ async def get_weather(
     
     return {**weather_data, "cached": False}
 
-@app.get("/weather/history/{city}", response_model=List[HistoricalWeatherResponse], dependencies=[Depends(RateLimiter(times=100, seconds=60))])
+@app.get("/weather/history/{city}", response_model=List[HistoricalWeatherResponse], dependencies=[Depends(RateLimiter(times=100, seconds=30))])
 async def get_history(
     city: str,
     days: int = 7,
@@ -240,7 +243,7 @@ async def get_history(
     
     return [{"cached": False, **item} for item in history]
 
-@app.get("/weather/trends/{city}", response_model=List[WeatherTrendResponse], dependencies=[Depends(RateLimiter(times=100, seconds=60))])
+@app.get("/weather/trends/{city}", response_model=List[WeatherTrendResponse], dependencies=[Depends(RateLimiter(times=100, seconds=30))])
 async def get_trends(
     city: str,
     days: int = 7,
@@ -281,6 +284,15 @@ async def get_trends(
 
 
     
+
+
+
+
+
+
+
+
+
 
 
 

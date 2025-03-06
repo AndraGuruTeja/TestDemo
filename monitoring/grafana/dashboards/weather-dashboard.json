@@ -1,0 +1,55 @@
+{
+    "dashboard": {
+      "title": "Weather Monitoring Dashboard",
+      "panels": [
+        {
+          "title": "API Requests",
+          "type": "graph",
+          "targets": [
+            {
+              "expr": "rate(http_requests_total[1m])",
+              "legendFormat": "{{endpoint}}"
+            }
+          ],
+          "gridPos": {
+            "x": 0,
+            "y": 0,
+            "w": 12,
+            "h": 8
+          }
+        },
+        {
+          "title": "Redis Memory Usage",
+          "type": "stat",
+          "targets": [
+            {
+              "expr": "redis_memory_used_bytes",
+              "legendFormat": "Memory Used"
+            }
+          ],
+          "gridPos": {
+            "x": 12,
+            "y": 0,
+            "w": 12,
+            "h": 8
+          }
+        },
+        {
+          "title": "Database Connections",
+          "type": "graph",
+          "targets": [
+            {
+              "expr": "pg_stat_activity_count",
+              "legendFormat": "Connections"
+            }
+          ],
+          "gridPos": {
+            "x": 0,
+            "y": 8,
+            "w": 12,
+            "h": 8
+          }
+        }
+      ]
+    }
+  }

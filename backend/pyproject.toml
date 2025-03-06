@@ -12,6 +12,7 @@ dependencies = [
     "pytest>=7.0.0"
 ]
 
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = [
@@ -30,8 +31,10 @@ filterwarnings = [
 markers = [
     "slow: mark test as slow to run",
     "integration: integration test",
-    "redis: test requires redis"
+    "redis: mark tests that require real redis connection"
 ]
+
+
 
 [tool.coverage.run]
 source = ["app"]
@@ -43,6 +46,7 @@ omit = [
     "app/tests/*"  # Exclude test directory
 ]
 
+
 [tool.coverage.report]
 show_missing = true
 fail_under = 60
@@ -53,7 +57,9 @@ exclude_lines = [
     "def __repr__",
     "raise NotImplementedError"
 ]
-ignore_errors = true  # Continue despite missing files
+ignore_errors = true
+
+
 
 [tool.coverage.paths]
 source = ["app"]  # Map source paths correctly
