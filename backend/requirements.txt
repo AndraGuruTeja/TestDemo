@@ -1,9 +1,15 @@
 fastapi==0.115.11
+fastapi_limiter==0.1.6
 jose==1.0.0
+locustio==0.999
+pandas==2.2.3
 passlib==1.7.4
+plotly==6.0.0
 pydantic==1.10.12
+pytest==7.4.0
 python-dotenv==1.0.1
+python_jose==3.4.0
 redis==4.5.0
 Requests==2.32.3
-slowapi==0.1.9
 SQLAlchemy==2.0.20
+streamlit==1.42.2
