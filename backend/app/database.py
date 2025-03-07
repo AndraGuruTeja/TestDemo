@@ -22,3 +22,8 @@ def get_db():
         db.close()
 
 Base = declarative_base()
+
+engine = create_engine(
+    settings.DATABASE_URL,
+    # Use a static pool for SQLite
+)

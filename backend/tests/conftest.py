@@ -117,6 +117,7 @@ def clean_redis(redis_client):
     yield
     redis_client.flushall()
 
+
 @pytest.fixture(autouse=True)
 def clean_tables(db_session):
     """
