@@ -19,6 +19,7 @@ from dotenv import load_dotenv
 from .data import generate_history, generate_fake_weather_data
 from .models import WeatherRecord, User, Base
 import os
+from prometheus_fastapi_instrumentator import Instrumentator
 
 # Load environment variables
 load_dotenv()
@@ -26,6 +27,7 @@ load_dotenv()
 # Create FastAPI app
 app = FastAPI()
 
+Instrumentator().instrument(app).expose(app)
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,

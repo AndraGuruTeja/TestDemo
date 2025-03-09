@@ -1,0 +1,156 @@
+# version: "3.8"
+
+# services:
+#   backend:
+#     build: 
+#       context: .
+#       dockerfile: backend/Dockerfile
+#     environment:
+#       - DATABASE_URL=sqlite:///./weather.db
+#       - REDIS_URL=redis://redis:6379
+#       - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}
+#       - SECRET_KEY=${SECRET_KEY}
+#       - ALGORITHM=${ALGORITHM}
+#     ports:
+#       - "8000:8000"
+#     volumes:
+#       - ./backend/weather.db:/app/weather.db
+#     depends_on:
+#       - redis
+
+#   frontend:
+#     build:
+#       context: ./backend
+#       dockerfile: frontend/Dockerfile
+#     ports:
+#       - "8501:8501"
+#     depends_on:
+#       - backend
+
+#   redis:
+#     image: redis:alpine
+#     ports:
+#       - "6379:6379"
+
+#   prometheus:
+#     image: prom/prometheus:latest
+#     ports:
+#       - "9090:9090"
+#     volumes:
+#       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+
+#   grafana:
+#     image: grafana/grafana:latest
+#     ports:
+#       - "3000:3000"
+#     volumes:
+#       - grafana_data:/var/lib/grafana
+#     depends_on:
+#       - prometheus
+
+# volumes:
+#   grafana_data:
+
+
+
+
+
+
+
+
+version: "3.8"
+
+services:
+  backend:
+    build: 
+      context: .
+      dockerfile: backend/Dockerfile
+    environment:
+      - DATABASE_URL=sqlite:///./weather.db
+      - REDIS_URL=redis://redis:6379
+      - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}
+      - SECRET_KEY=${SECRET_KEY}
+      - ALGORITHM=${ALGORITHM}
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend/weather.db:/app/weather.db
+    depends_on:
+      - redis
+    networks:
+      - weather_network
+    restart: always
+
+  frontend:
+    build:
+      context: ./backend
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "8501:8501"
+    depends_on:
+      - backend
+    networks:
+      - weather_network
+    restart: always
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - weather_network
+    restart: always
+    volumes:
+      - redis_data:/data
+
+  redis_exporter:
+    image: oliver006/redis_exporter:latest
+    ports:
+      - "9121:9121"
+    environment:
+      - REDIS_ADDR=redis://redis:6379
+    depends_on:
+      - redis
+    networks:
+      - weather_network
+    restart: always
+
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml
+      - prometheus_data:/prometheus  # Persistent storage
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--web.enable-lifecycle"
+      - "--storage.tsdb.path=/prometheus"  # Data storage path
+    networks:
+      - weather_network
+    restart: always
+
+  grafana:
+    image: grafana/grafana
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana  # Persistent storage
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+    depends_on:
+      - prometheus
+    networks:
+      - weather_network
+    restart: always
+
+volumes:
+  grafana_data:  # Grafana database/config storage
+  prometheus_data:  # Prometheus metrics storage
+  redis_data:  # Redis data storage
+
+networks:
+  weather_network:
+    driver: bridge

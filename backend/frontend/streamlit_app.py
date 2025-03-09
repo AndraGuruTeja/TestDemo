@@ -6,7 +6,8 @@ import time
 from datetime import datetime
 
 # FastAPI backend URL
-BACKEND_URL = "http://localhost:8000"
+BACKEND_URL = "http://backend:8000"  # Use the 'backend' service name from docker-compose.yml
+
 
 # Session state to manage user authentication
 if 'token' not in st.session_state:

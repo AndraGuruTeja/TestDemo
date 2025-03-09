@@ -1,0 +1,49 @@
+{
+    "title": "Weather App Dashboard",
+    "description": "Comprehensive monitoring for Weather Monitoring Application",
+    "tags": ["weather", "monitoring"],
+    "style": "dark",
+    "timezone": "browser",
+    "editable": true,
+    "refresh": "30s",
+    "panels": [
+      {
+        "id": 1,
+        "title": "API Response Times",
+        "type": "graph",
+        "gridPos": {"x":0,"y":0,"w":12,"h":8},
+        "targets": [{
+          "expr": "rate(http_request_duration_seconds_sum[1m])/rate(http_request_duration_seconds_count[1m])",
+          "legendFormat": "{{endpoint}}"
+        }]
+      },
+      {
+        "id": 2,
+        "title": "Redis Memory Usage",
+        "type": "gauge",
+        "gridPos": {"x":12,"y":0,"w":6,"h":4},
+        "targets": [{
+          "expr": "redis_memory_used_bytes / redis_memory_max_bytes * 100"
+        }]
+      },
+      {
+        "id": 3,
+        "title": "Database Connections",
+        "type": "stat",
+        "gridPos": {"x":18,"y":0,"w":6,"h":4},
+        "targets": [{
+          "expr": "sum by (state) (pg_stat_activity_count)"
+        }]
+      },
+      {
+        "id": 4,
+        "title": "Error Rate",
+        "type": "graph",
+        "gridPos": {"x":0,"y":8,"w":12,"h":8},
+        "targets": [
+          {"expr": "rate(http_requests_total{status=~'5..'}[5m])", "legendFormat": "5xx"},
+          {"expr": "rate(http_requests_total{status=~'4..'}[5m])", "legendFormat": "4xx"}
+        ]
+      }
+    ]
+  }

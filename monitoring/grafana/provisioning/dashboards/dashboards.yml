@@ -1,0 +1,23 @@
+# apiVersion: 1
+
+# providers:
+#   - name: 'default'
+#     orgId: 1
+#     folder: ''
+#     type: file
+#     options:
+#       path: /var/lib/grafana/dashboards
+
+
+
+apiVersion: 1
+
+providers:
+  - name: 'default'
+    orgId: 1
+    folder: ''
+    type: file
+    disableDeletion: true
+    updateIntervalSeconds: 30  # Faster refresh
+    options:
+      path: /var/lib/grafana/dashboards

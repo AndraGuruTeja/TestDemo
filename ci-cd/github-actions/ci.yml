@@ -1,0 +1,44 @@
+name: Local CI Pipeline
+
+on: [push, pull_request]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      redis:
+        image: redis:alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: 3.9
+
+      - name: Install dependencies
+        run: |
+          pip install -r backend/requirements.txt
+          pip install pytest locust coverage
+
+      - name: Run unit tests
+        run: |
+          pytest backend/tests/ -v --cov=backend/app --cov-report=xml
+        env:
+          DATABASE_URL: sqlite:///./backend/weather.db
+          REDIS_URL: redis://localhost:6379
+          TESTING: true
+
+      - name: Run load tests
+        run: |
+          locust -f backend/tests/load_tests/locustfile.py \
+            --headless -u 100 -r 10 --run-time 1m \
+            --host http://localhost:8000
+        env:
+          APP_URL: http://localhost:8000
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v3
