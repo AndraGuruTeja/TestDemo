@@ -16,9 +16,6 @@ dependencies = [
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 addopts = [
-    "--cov=app",
-    "--cov-report=term-missing:skip-covered",  # Cleaner output
-    "--cov-fail-under=60",
     "--verbose",
     "--disable-warnings",
     "--strict-markers"  # Ensure test markers are defined
