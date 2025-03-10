@@ -105,6 +105,145 @@
 
 
 
+# version: "3.8"
+
+# services:
+#   backend:
+#     build: 
+#       context: .
+#       dockerfile: backend/Dockerfile
+#     environment:
+#       - DATABASE_URL=sqlite:///./weather.db
+#       - REDIS_URL=redis://redis:6379
+#       - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}
+#       - SECRET_KEY=${SECRET_KEY}
+#       - ALGORITHM=${ALGORITHM}
+#     ports:
+#       - "8000:8000"
+#     volumes:
+#       - ./backend/weather.db:/app/weather.db
+#     depends_on:
+#       redis:
+#         condition: service_healthy
+#     networks:
+#       - weather_network
+#     restart: always
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#       start_period: 20s
+
+#   frontend:
+#     build:
+#       context: ./backend
+#       dockerfile: frontend/Dockerfile
+#     ports:
+#       - "8501:8501"
+#     depends_on:
+#       backend:
+#         condition: service_healthy
+#     networks:
+#       - weather_network
+#     restart: always
+
+#   redis:
+#     image: redis:alpine
+#     ports:
+#       - "6379:6379"
+#     networks:
+#       - weather_network
+#     restart: always
+#     volumes:
+#       - redis_data:/data
+#     healthcheck:
+#       test: ["CMD", "redis-cli", "ping"]
+#       interval: 15s
+#       timeout: 5s
+#       retries: 3
+#       start_period: 10s
+
+#   redis_exporter:
+#     image: oliver006/redis_exporter:latest
+#     ports:
+#       - "9121:9121"
+#     environment:
+#       - REDIS_ADDR=redis://redis:6379
+#     depends_on:
+#       redis:
+#         condition: service_healthy
+#     networks:
+#       - weather_network
+#     restart: always
+
+#   prometheus:
+#     image: prom/prometheus:latest
+#     ports:
+#       - "9090:9090"
+#     volumes:
+#       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+#       - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml
+#       - prometheus_data:/prometheus
+#     command:
+#       - "--config.file=/etc/prometheus/prometheus.yml"
+#       - "--web.enable-lifecycle"
+#       - "--storage.tsdb.path=/prometheus"
+#     networks:
+#       - weather_network
+#     restart: always
+#     healthcheck:
+#       test: ["CMD", "wget", "--spider", "http://localhost:9090/-/healthy"]
+#       interval: 30s
+#       timeout: 10s
+
+#   grafana:
+#     image: grafana/grafana
+#     container_name: grafana
+#     ports:
+#       - "3000:3000"
+#     volumes:
+#       - grafana_data:/var/lib/grafana
+#       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+#       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+#     depends_on:
+#       prometheus:
+#         condition: service_healthy
+#     networks:
+#       - weather_network
+#     restart: always
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+#       interval: 30s
+#       timeout: 5s
+
+#   backup:
+#     image: alpine
+#     volumes:
+#       - ./infrastructure/scripts:/scripts
+#       - backup_data:/backups
+#     command: sh -c "echo '0 3 * * * /scripts/backup_restore.sh backup sqlite' | crontab - && crond -f"
+#     networks:
+#       - weather_network
+#     restart: unless-stopped
+
+# volumes:
+#   grafana_data:
+#   prometheus_data:
+#   redis_data:
+#   backup_data:
+
+# networks:
+#   weather_network:
+#     driver: bridge
+
+
+
+
+
+
+
+
 version: "3.8"
 
 services:
@@ -133,7 +272,7 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 20s
+      start_period: 60s  # Increased start period
 
   frontend:
     build:
@@ -147,6 +286,12 @@ services:
     networks:
       - weather_network
     restart: always
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8501"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s  # Added health check for frontend
 
   redis:
     image: redis:alpine
@@ -236,4 +381,3 @@ volumes:
 networks:
   weather_network:
     driver: bridge
-
