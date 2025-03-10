@@ -15,3 +15,5 @@ SQLAlchemy==2.0.20
 uvicorn[standard]
 streamlit==1.42.2
 prometheus-fastapi-instrumentator
+httpx>=0.23.0
+pytest-asyncio==0.23.5
