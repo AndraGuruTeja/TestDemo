@@ -281,8 +281,7 @@ services:
     ports:
       - "8501:8501"
     depends_on:
-      backend:
-        condition: service_healthy
+      - backend
     networks:
       - weather_network
     restart: always
