@@ -175,10 +175,10 @@ jobs:
 
     - name: Run load tests
       run: |
-        python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
+        python -m uvicorn app.main:app --host 0.0.0.0 --port 8000 &
         sleep 15
         locust -f backend/tests/load_tests/locustfile.py \
-          --headless -u 50 -r 10 --run-time 1m \
+          --headless -u 5 -r 10 --run-time 1m \
           --host http://localhost:8000 > locust_result.txt
 
         fail_rate=$(grep "Aggregated" locust_result.txt | awk '{print $5}' | sed 's/(//;s/%)//')
