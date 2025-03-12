@@ -1,4 +1,3 @@
-
 import requests
 import json
 from redis import Redis
@@ -22,6 +21,7 @@ def get_weather_data(city: str):
         "humidity": data["main"]["humidity"],
         "description": data["weather"][0]["description"]
     }
+
 
 
 
