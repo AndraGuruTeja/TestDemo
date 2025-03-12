@@ -171,7 +171,6 @@
 
 
 
-
 version: '3.8'
 
 services:
@@ -186,6 +185,11 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d weather"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     networks:
       - weather_network
     restart: always
@@ -201,8 +205,10 @@ services:
     ports:
       - "8000:8000"
     depends_on:
-      - postgres
-      - redis
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - weather_network
     restart: always
@@ -214,7 +220,8 @@ services:
     ports:
       - "8501:8501"
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     networks:
       - weather_network
     restart: always
@@ -224,6 +231,11 @@ services:
     container_name: redis
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
     networks:
       - weather_network
     restart: always
@@ -253,6 +265,11 @@ services:
       - "--config.file=/etc/prometheus/prometheus.yml"
       - "--web.enable-lifecycle"
       - "--storage.tsdb.path=/prometheus"
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
     networks:
       - weather_network
     restart: always
@@ -282,11 +299,11 @@ services:
       - POSTGRES_PASSWORD=1234
       - POSTGRES_DB=weather
       - POSTGRES_HOST=postgres
-    networks:
-      - weather_network
     depends_on:
       postgres:
         condition: service_healthy
+    networks:
+      - weather_network
     restart: unless-stopped
 
 volumes:

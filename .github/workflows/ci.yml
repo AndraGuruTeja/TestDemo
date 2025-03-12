@@ -1,5 +1,4 @@
 
-
 # name: Full CI/CD Pipeline
 
 # on:
@@ -29,51 +28,51 @@
 #         options: --health-cmd "redis-cli ping" --health-interval 15s --health-timeout 5s --health-retries 3
 
 #     steps:
-#     - name: Checkout code
-#       uses: actions/checkout@v4
+#       - name: Checkout code
+#         uses: actions/checkout@v4
 
-#     - name: Set up Python 3.9
-#       uses: actions/setup-python@v4
-#       with:
-#         python-version: "3.9"
+#       - name: Set up Python 3.9
+#         uses: actions/setup-python@v4
+#         with:
+#           python-version: "3.9"
 
-#     - name: Install dependencies
-#       run: |
-#         python -m pip install --upgrade pip
-#         pip install -r backend/requirements.txt
-#         pip install pytest locust httpx pytest-asyncio psycopg2-binary
+#       - name: Install dependencies
+#         run: |
+#           python -m pip install --upgrade pip
+#           pip install -r backend/requirements.txt
+#           pip install pytest locust httpx pytest-asyncio psycopg2-binary
 
-#     - name: Run unit tests
-#       run: pytest backend/tests/ -v
-#       env:
-#         DATABASE_URL: "postgresql+psycopg2://admin:1234@localhost:5432/weather"
-#         REDIS_URL: "redis://localhost:6379"
-#         OPENWEATHER_API_KEY: "9d700c0c0c25726a887c42a0c667c9dd"
-#         SECRET_KEY: "7bf196ef4e3db20e13c1b9c484e9060e6ee90cf40571c4f3447627bf104b9295"
-#         ALGORITHM: "HS256"
-#         TESTING: "true"
+#       - name: Run unit tests
+#         run: pytest backend/tests/ -v
+#         env:
+#           DATABASE_URL: "postgresql+psycopg2://admin:1234@localhost:5432/weather"
+#           REDIS_URL: "redis://localhost:6379"
+#           OPENWEATHER_API_KEY: "9d700c0c0c25726a887c42a0c667c9dd"
+#           SECRET_KEY: "7bf196ef4e3db20e13c1b9c484e9060e6ee90cf40571c4f3447627bf104b9295"
+#           ALGORITHM: "HS256"
+#           TESTING: "true"
 
-#     - name: Start backend service
-#       run: |
-#         export PYTHONPATH=$PYTHONPATH:$(pwd)/backend
-#         sleep 10  # Ensure PostgreSQL & Redis are ready
-#         uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload &
-#       env:
-#         DATABASE_URL: "postgresql+psycopg2://admin:1234@localhost:5432/weather"
-#         REDIS_URL: "redis://localhost:6379"
+#       - name: Start backend service
+#         run: |
+#           export PYTHONPATH=$PYTHONPATH:$(pwd)/backend
+#           uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload &
+#         env:
+#           DATABASE_URL: "postgresql+psycopg2://admin:1234@localhost:5432/weather"
+#           REDIS_URL: "redis://localhost:6379"
 
-#     - name: Run load tests
-#       run: |
-#         locust -f backend/tests/load_tests/locustfile.py \
-#           --headless -u 5 -r 10 --run-time 10s \
-#           --host http://localhost:8000 > locust_result.txt
-#       env:
-#         DATABASE_URL: "postgresql+psycopg2://admin:1234@localhost:5432/weather"
-#         REDIS_URL: "redis://localhost:6379"
-#         OPENWEATHER_API_KEY: "9d700c0c0c25726a887c42a0c667c9dd"
-#         SECRET_KEY: "7bf196ef4e3db20e13c1b9c484e9060e6ee90cf40571c4f3447627bf104b9295"
-#         ALGORITHM: "HS256"
-#         TESTING: "true"
+#       - name: Run load tests
+#         run: |
+#           locust -f backend/tests/load_tests/locustfile.py \
+#             --headless -u 5 -r 10 --run-time 10s \
+#             --host http://localhost:8000 > locust_result.txt
+#         env:
+#           DATABASE_URL: "postgresql+psycopg2://admin:1234@localhost:5432/weather"
+#           REDIS_URL: "redis://localhost:6379"
+#           OPENWEATHER_API_KEY: "9d700c0c0c25726a887c42a0c667c9dd"
+#           SECRET_KEY: "7bf196ef4e3db20e13c1b9c484e9060e6ee90cf40571c4f3447627bf104b9295"
+#           ALGORITHM: "HS256"
+#           TESTING: "true"
+
 #   backup:
 #     needs: test
 #     runs-on: ubuntu-latest
@@ -111,7 +110,6 @@
 #           name: db-backups
 #           path: backups/
 
-
 #   deploy:
 #     needs: [test, backup]
 #     runs-on: ubuntu-latest
@@ -119,24 +117,25 @@
 #       - name: Checkout code
 #         uses: actions/checkout@v4
 
-#       - name: Set up Docker
+#       - name: Install Docker (official script)
 #         run: |
-#           sudo apt-get update
-#           sudo apt-get install -y docker.io docker-compose
+#           curl -fsSL https://get.docker.com | sh
+#           sudo usermod -aG docker $USER
+
+#       - name: Verify Docker installation
+#         run: docker --version
 
 #       - name: Start services with Docker Compose
-#         run: docker-compose up -d --build
+#         run: docker compose up -d --build
 
-#       - name: Verify services
+#       - name: Verify running services
 #         run: |
-#           docker-compose ps
-#           docker-compose logs --tail=50
+#           docker compose ps
+#           docker compose logs --tail=50
 
 #       - name: Cleanup
 #         if: always()
-#         run: docker-compose down -v
-
-
+#         run: docker compose down -v
 
 
 
@@ -266,8 +265,14 @@ jobs:
       - name: Verify Docker installation
         run: docker --version
 
+      - name: Build Docker images
+        run: |
+          docker build -t weather-backend -f backend/Dockerfile .
+          docker build -t weather-frontend -f backend/frontend/Dockerfile .
+          docker build -t weather-backup -f infrastructure/backup.Dockerfile .
+
       - name: Start services with Docker Compose
-        run: docker compose up -d --build
+        run: docker compose up -d
 
       - name: Verify running services
         run: |
