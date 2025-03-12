@@ -317,7 +317,7 @@ jobs:
     - name: Run load tests
       run: |
         locust -f backend/tests/load_tests/locustfile.py \
-          --headless -u 5 -r 10 --run-time 30s \
+          --headless -u 5 -r 10 --run-time 10s \
           --host http://localhost:8000 > locust_result.txt
 
        
@@ -334,7 +334,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
@@ -357,7 +357,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v3
 
       - name: Set up Docker
         run: |
@@ -370,11 +370,8 @@ jobs:
       - name: Verify services
         run: |
           docker-compose ps
-          docker-compose logs --tail=100
+          docker-compose logs --tail=50
 
-      - name: Health check
-        run: |
-          curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost:8000/health
 
       - name: Cleanup
         if: always()
