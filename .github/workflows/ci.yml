@@ -249,7 +249,6 @@
 
 
 
-
 name: Full CI/CD Pipeline
 
 on:
@@ -279,61 +278,74 @@ jobs:
         options: --health-cmd "redis-cli ping" --health-interval 15s --health-timeout 5s --health-retries 3
 
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    - name: Set up Python 3.9
-      uses: actions/setup-python@v4
-      with:
-        python-version: "3.9"
+      - name: Set up Python 3.9
+        uses: actions/setup-python@v4
+        with:
+          python-version: "3.9"
 
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        pip install -r backend/requirements.txt
-        pip install pytest locust httpx pytest-asyncio psycopg2-binary
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          pip install pytest locust httpx pytest-asyncio psycopg2-binary
 
-    - name: Run unit tests
-      run: pytest backend/tests/ -v
-      env:
-        DATABASE_URL: "postgresql+psycopg2://admin:1234@localhost:5432/weather"
-        REDIS_URL: "redis://localhost:6379"
-        OPENWEATHER_API_KEY: "9d700c0c0c25726a887c42a0c667c9dd"
-        SECRET_KEY: "7bf196ef4e3db20e13c1b9c484e9060e6ee90cf40571c4f3447627bf104b9295"
-        ALGORITHM: "HS256"
-        TESTING: "true"
+      - name: Run unit tests
+        run: pytest backend/tests/ -v
+        env:
+          DATABASE_URL: "postgresql+psycopg2://admin:1234@localhost:5432/weather"
+          REDIS_URL: "redis://localhost:6379"
+          OPENWEATHER_API_KEY: "9d700c0c0c25726a887c42a0c667c9dd"
+          SECRET_KEY: "7bf196ef4e3db20e13c1b9c484e9060e6ee90cf40571c4f3447627bf104b9295"
+          ALGORITHM: "HS256"
+          TESTING: "true"
 
-    - name: Start backend service
-      run: |
-        export PYTHONPATH=$PYTHONPATH:$(pwd)/backend
-        sleep 10  # Ensure PostgreSQL & Redis are ready
-        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload &
-      env:
-        DATABASE_URL: "postgresql+psycopg2://admin:1234@localhost:5432/weather"
-        REDIS_URL: "redis://localhost:6379"
+      - name: Start backend service
+        run: |
+          export PYTHONPATH=$PYTHONPATH:$(pwd)/backend
+          uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload &
+        env:
+          DATABASE_URL: "postgresql+psycopg2://admin:1234@localhost:5432/weather"
+          REDIS_URL: "redis://localhost:6379"
 
-    - name: Run load tests
-      run: |
-        locust -f backend/tests/load_tests/locustfile.py \
-          --headless -u 5 -r 10 --run-time 10s \
-          --host http://localhost:8000 > locust_result.txt
-      env:
-        DATABASE_URL: "postgresql+psycopg2://admin:1234@localhost:5432/weather"
-        REDIS_URL: "redis://localhost:6379"
-        OPENWEATHER_API_KEY: "9d700c0c0c25726a887c42a0c667c9dd"
-        SECRET_KEY: "7bf196ef4e3db20e13c1b9c484e9060e6ee90cf40571c4f3447627bf104b9295"
-        ALGORITHM: "HS256"
-        TESTING: "true"
+      - name: Run load tests
+        run: |
+          locust -f backend/tests/load_tests/locustfile.py \
+            --headless -u 5 -r 10 --run-time 10s \
+            --host http://localhost:8000 > locust_result.txt
+        env:
+          DATABASE_URL: "postgresql+psycopg2://admin:1234@localhost:5432/weather"
+          REDIS_URL: "redis://localhost:6379"
+          OPENWEATHER_API_KEY: "9d700c0c0c25726a887c42a0c667c9dd"
+          SECRET_KEY: "7bf196ef4e3db20e13c1b9c484e9060e6ee90cf40571c4f3447627bf104b9295"
+          ALGORITHM: "HS256"
+          TESTING: "true"
 
   backup:
     needs: test
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:14-alpine
+        env:
+          POSTGRES_USER: admin
+          POSTGRES_PASSWORD: 1234
+          POSTGRES_DB: weather
+        ports:
+          - 5432:5432
+        options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Wait for PostgreSQL to be ready
+        run: sleep 10  # Ensure PostgreSQL service is fully started
 
       - name: Backup database
         run: |
