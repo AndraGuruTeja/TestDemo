@@ -1,5 +1,4 @@
 
-
 # name: Full CI/CD Pipeline
 
 # on:
@@ -12,10 +11,6 @@
 #   test:
 #     runs-on: ubuntu-latest
 #     services:
-#       redis:
-#         image: redis:alpine
-#         ports:
-#           - 6379:6379
 #       postgres:
 #         image: postgres:latest
 #         env:
@@ -25,6 +20,11 @@
 #         ports:
 #           - 5432:5432
 #         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
+
+#       redis:
+#         image: redis:alpine
+#         ports:
+#           - 6379:6379
 
 #     steps:
 #     - name: Checkout code
@@ -39,28 +39,32 @@
 #       run: |
 #         python -m pip install --upgrade pip
 #         pip install -r backend/requirements.txt
-#         pip install pytest locust httpx pytest-asyncio
+#         pip install pytest locust httpx pytest-asyncio psycopg2-binary
 
 #     - name: Run unit tests
 #       run: pytest backend/tests/ -v
 #       env:
-#         DATABASE_URL: "sqlite:///backend/weather.db" # Hardcoded for now
-#         REDIS_URL: "redis://localhost:6379"     # Hardcoded for now
-#         OPENWEATHER_API_KEY: "9d700c0c0c25726a887c42a0c667c9dd"  # Hardcoded for now
-#         SECRET_KEY: "7bf196ef4e3db20e13c1b9c484e9060e6ee90cf40571c4f3447627bf104b9295"  # Hardcoded for now
-#         ALGORITHM: "HS256"  # Hardcoded for now
-#         TESTING: "true"  # Hardcoded for now
+#         DATABASE_URL: "postgresql://admin:secret@localhost:5432/weatherdb"
+#         REDIS_URL: "redis://localhost:6379"
+#         OPENWEATHER_API_KEY: "9d700c0c0c25726a887c42a0c667c9dd"
+#         SECRET_KEY: "7bf196ef4e3db20e13c1b9c484e9060e6ee90cf40571c4f3447627bf104b9295"
+#         ALGORITHM: "HS256"
+#         TESTING: "true"
 
 #     - name: Run load tests
 #       run: |
-#         # Start the backend server in the background
 #         python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
-#         # Wait for the server to start
 #         sleep 15
-#         # Run load tests
 #         locust -f backend/tests/load_tests/locustfile.py \
 #           --headless -u 50 -r 10 --run-time 1m \
 #           --host http://localhost:8000
+#       env:
+#         DATABASE_URL: "postgresql://admin:secret@localhost:5432/weatherdb"
+#         REDIS_URL: "redis://localhost:6379"
+#         OPENWEATHER_API_KEY: "9d700c0c0c25726a887c42a0c667c9dd"
+#         SECRET_KEY: "7bf196ef4e3db20e13c1b9c484e9060e6ee90cf40571c4f3447627bf104b9295"
+#         ALGORITHM: "HS256"
+#         TESTING: "true"
 
 #   backup:
 #     needs: test
@@ -69,118 +73,15 @@
 #       - name: Checkout code
 #         uses: actions/checkout@v4
 
-#       - name: Setup SQLite
-#         run: |
-#           sudo apt-get update
-#           sudo apt-get install sqlite3
+#       - name: Install PostgreSQL client
+#         run: sudo apt-get update && sudo apt-get install -y postgresql-client
 
-#       - name: Run backup
+#       - name: Backup database
 #         run: |
 #           mkdir -p infrastructure/backups
-#           ./infrastructure/scripts/backup_restore.sh backup
-
-#       - name: Upload backup artifacts
-#         uses: actions/upload-artifact@v3
-#         with:
-#           name: db-backups
-#           path: infrastructure/backups/
-
-#   # Removed the deploy job since it requires self-hosted runner
-
-
-# name: Full CI/CD Pipeline
-
-# on:
-#   push:
-#     branches: [ "main" ]
-#   pull_request:
-#     branches: [ "main" ]
-
-# jobs:
-#   test:
-#     runs-on: ubuntu-latest
-#     services:
-#       redis:
-#         image: redis:alpine
-#         ports:
-#           - 6379:6379
-#       postgres:
-#         image: postgres:latest
+#           PGPASSWORD="secret" pg_dump -h localhost -U admin -d weatherdb > infrastructure/backups/weatherdb_backup.sql
 #         env:
-#           POSTGRES_USER: admin
-#           POSTGRES_PASSWORD: secret
-#           POSTGRES_DB: weatherdb
-#         ports:
-#           - 5432:5432
-#         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
-
-#     steps:
-#     - name: Checkout code
-#       uses: actions/checkout@v4
-
-#     - name: Set up Python 3.9
-#       uses: actions/setup-python@v4
-#       with:
-#         python-version: "3.9"
-
-#     - name: Install dependencies
-#       run: |
-#         python -m pip install --upgrade pip
-#         pip install -r backend/requirements.txt
-#         pip install pytest locust httpx pytest-asyncio psycopg2-binary alembic
-
-#     - name: Run database migrations
-#       run: |
-#         alembic upgrade head
-#       env:
-#         DATABASE_URL: "postgresql://admin:secret@localhost:5432/weatherdb"
-
-#     - name: Run unit tests with PostgreSQL
-#       run: pytest backend/tests/ -v
-#       env:
-#         DATABASE_URL: "postgresql://admin:secret@localhost:5432/weatherdb"
-#         REDIS_URL: "redis://localhost:6379"
-#         OPENWEATHER_API_KEY: "9d700c0c0c25726a887c42a0c667c9dd"
-#         SECRET_KEY: "7bf196ef4e3db20e13c1b9c484e9060e6ee90cf40571c4f3447627bf104b9295"
-#         ALGORITHM: "HS256"
-#         TESTING: "true"
-
-#     - name: Run load tests with PostgreSQL
-#       run: |
-#         python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
-#         sleep 15
-#         locust -f backend/tests/load_tests/locustfile.py \
-#           --headless -u 50 -r 10 --run-time 1m \
-#           --host http://localhost:8000
-#       env:
-#         DATABASE_URL: "postgresql://admin:secret@localhost:5432/weatherdb"
-#         REDIS_URL: "redis://localhost:6379"
-#         OPENWEATHER_API_KEY: "9d700c0c0c25726a887c42a0c667c9dd"
-#         SECRET_KEY: "7bf196ef4e3db20e13c1b9c484e9060e6ee90cf40571c4f3447627bf104b9295"
-#         ALGORITHM: "HS256"
-#         TESTING: "true"
-
-#   backup:
-#     needs: test
-#     runs-on: ubuntu-latest
-#     steps:
-#       - name: Checkout code
-#         uses: actions/checkout@v4
-
-#       - name: Setup SQLite
-#         run: |
-#           sudo apt-get update
-#           sudo apt-get install sqlite3
-
-#       - name: Create SQLite database
-#         run: |
-#           mkdir -p backend
-#           touch backend/weather.db
-
-#       - name: Run backup
-#         run: |
-#           mkdir -p infrastructure/backups
-#           ./infrastructure/scripts/backup_restore.sh backup
+#           PGPASSWORD: "secret"
 
 #       - name: Upload backup artifacts
 #         uses: actions/upload-artifact@v3
@@ -200,9 +101,8 @@
 #           sudo apt-get update
 #           sudo apt-get install -y docker.io docker-compose
 
-#       - name: Docker Compose up
-#         run: |
-#           docker-compose up -d --build
+#       - name: Start services with Docker Compose
+#         run: docker-compose up -d --build
 
 #       - name: Verify services
 #         run: |
@@ -213,22 +113,9 @@
 #         run: |
 #           curl --retry 10 --retry-delay 5 --retry-connrefused http://localhost:8000/health
 
-#       - name: Docker Compose down (cleanup)
+#       - name: Cleanup
 #         if: always()
-#         run: |
-#           docker-compose down -v
-
-
-
-
-
-
-
-
-
-
-
-
+#         run: docker-compose down -v
 
 
 
@@ -248,11 +135,11 @@ jobs:
     runs-on: ubuntu-latest
     services:
       postgres:
-        image: postgres:latest
+        image: postgres:14-alpine
         env:
           POSTGRES_USER: admin
-          POSTGRES_PASSWORD: secret
-          POSTGRES_DB: weatherdb
+          POSTGRES_PASSWORD: 1234
+          POSTGRES_DB: weather
         ports:
           - 5432:5432
         options: --health-cmd pg_isready --health-interval 10s --health-timeout 5s --health-retries 5
@@ -261,6 +148,7 @@ jobs:
         image: redis:alpine
         ports:
           - 6379:6379
+        options: --health-cmd "redis-cli ping" --health-interval 15s --health-timeout 5s --health-retries 3
 
     steps:
     - name: Checkout code
@@ -280,7 +168,7 @@ jobs:
     - name: Run unit tests
       run: pytest backend/tests/ -v
       env:
-        DATABASE_URL: "postgresql://admin:secret@localhost:5432/weatherdb"
+        DATABASE_URL: "postgresql+psycopg2://admin:1234@localhost:5432/weather"
         REDIS_URL: "redis://localhost:6379"
         OPENWEATHER_API_KEY: "9d700c0c0c25726a887c42a0c667c9dd"
         SECRET_KEY: "7bf196ef4e3db20e13c1b9c484e9060e6ee90cf40571c4f3447627bf104b9295"
@@ -295,7 +183,7 @@ jobs:
           --headless -u 50 -r 10 --run-time 1m \
           --host http://localhost:8000
       env:
-        DATABASE_URL: "postgresql://admin:secret@localhost:5432/weatherdb"
+        DATABASE_URL: "postgresql+psycopg2://admin:1234@localhost:5432/weather"
         REDIS_URL: "redis://localhost:6379"
         OPENWEATHER_API_KEY: "9d700c0c0c25726a887c42a0c667c9dd"
         SECRET_KEY: "7bf196ef4e3db20e13c1b9c484e9060e6ee90cf40571c4f3447627bf104b9295"
@@ -314,16 +202,16 @@ jobs:
 
       - name: Backup database
         run: |
-          mkdir -p infrastructure/backups
-          PGPASSWORD="secret" pg_dump -h localhost -U admin -d weatherdb > infrastructure/backups/weatherdb_backup.sql
+          mkdir -p backups
+          PGPASSWORD="1234" pg_dump -h localhost -U admin -d weather > backups/weather_backup.sql
         env:
-          PGPASSWORD: "secret"
+          PGPASSWORD: "1234"
 
       - name: Upload backup artifacts
         uses: actions/upload-artifact@v3
         with:
           name: db-backups
-          path: infrastructure/backups/
+          path: backups/
 
   deploy:
     needs: [test, backup]

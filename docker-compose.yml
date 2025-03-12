@@ -17,10 +17,17 @@
 #     volumes:
 #       - ./backend/weather.db:/app/weather.db
 #     depends_on:
-#       - redis
+#       redis:
+#         condition: service_healthy
 #     networks:
 #       - weather_network
 #     restart: always
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#       start_period: 60s  # Increased start period
 
 #   frontend:
 #     build:
@@ -33,120 +40,12 @@
 #     networks:
 #       - weather_network
 #     restart: always
-
-#   redis:
-#     image: redis:alpine
-#     ports:
-#       - "6379:6379"
-#     networks:
-#       - weather_network
-#     restart: always
-#     volumes:
-#       - redis_data:/data
-
-#   redis_exporter:
-#     image: oliver006/redis_exporter:latest
-#     ports:
-#       - "9121:9121"
-#     environment:
-#       - REDIS_ADDR=redis://redis:6379
-#     depends_on:
-#       - redis
-#     networks:
-#       - weather_network
-#     restart: always
-
-#   prometheus:
-#     image: prom/prometheus:latest
-#     ports:
-#       - "9090:9090"
-#     volumes:
-#       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
-#       - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml
-#       - prometheus_data:/prometheus  # Persistent storage
-#     command:
-#       - "--config.file=/etc/prometheus/prometheus.yml"
-#       - "--web.enable-lifecycle"
-#       - "--storage.tsdb.path=/prometheus"  # Data storage path
-#     networks:
-#       - weather_network
-#     restart: always
-
-#   grafana:
-#     image: grafana/grafana
-#     container_name: grafana
-#     ports:
-#       - "3000:3000"
-#     volumes:
-#       - grafana_data:/var/lib/grafana  # Persistent storage
-#       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
-#       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
-#     depends_on:
-#       - prometheus
-#     networks:
-#       - weather_network
-#     restart: always
-
-# volumes:
-#   grafana_data:  # Grafana database/config storage
-#   prometheus_data:  # Prometheus metrics storage
-#   redis_data:  # Redis data storage
-
-# networks:
-#   weather_network:
-#     driver: bridge
-
-
-
-
-
-
-
-
-
-
-# version: "3.8"
-
-# services:
-#   backend:
-#     build: 
-#       context: .
-#       dockerfile: backend/Dockerfile
-#     environment:
-#       - DATABASE_URL=sqlite:///./weather.db
-#       - REDIS_URL=redis://redis:6379
-#       - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}
-#       - SECRET_KEY=${SECRET_KEY}
-#       - ALGORITHM=${ALGORITHM}
-#     ports:
-#       - "8000:8000"
-#     volumes:
-#       - ./backend/weather.db:/app/weather.db
-#     depends_on:
-#       redis:
-#         condition: service_healthy
-#     networks:
-#       - weather_network
-#     restart: always
 #     healthcheck:
-#       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+#       test: ["CMD", "curl", "-f", "http://localhost:8501"]
 #       interval: 30s
 #       timeout: 10s
 #       retries: 3
-#       start_period: 20s
-
-#   frontend:
-#     build:
-#       context: ./backend
-#       dockerfile: frontend/Dockerfile
-#     ports:
-#       - "8501:8501"
-#     depends_on:
-#       backend:
-#         condition: service_healthy
-#     networks:
-#       - weather_network
-#     restart: always
+#       start_period: 60s  # Added health check for frontend
 
 #   redis:
 #     image: redis:alpine
@@ -244,26 +143,412 @@
 
 
 
-version: "3.8"
+# services:
+#   postgres:
+#     image: postgres:latest
+#     container_name: postgres
+#     environment:
+#       - POSTGRES_USER=admin
+#       - POSTGRES_PASSWORD=1234
+#       - POSTGRES_DB=weather
+#     ports:
+#       - "5432:5432"
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+#     networks:
+#       - weather_network
+#     restart: always
+
+#   backend:
+#     build: 
+#       context: .
+#       dockerfile: backend/Dockerfile
+#     environment:
+#       - DATABASE_URL=postgresql+psycopg2://admin:1234@postgres:5432/weather
+#       - REDIS_URL=redis://redis:6379
+#       - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}
+#       - SECRET_KEY=${SECRET_KEY}
+#       - ALGORITHM=${ALGORITHM}
+#     ports:
+#       - "8000:8000"
+#     depends_on:
+#       - postgres  
+#       - redis
+        
+#     networks:
+#       - weather_network
+#     restart: always
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#       start_period: 60s  
+
+#   frontend:
+#     build:
+#       context: ./backend/frontend
+#       dockerfile: Dockerfile
+#     ports:
+#       - "8501:8501"
+#     depends_on:
+#       - backend
+#     networks:
+#       - weather_network
+#     restart: always
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:8501"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#       start_period: 60s  
+
+#   redis:
+#     image: redis:alpine
+#     container_name: redis
+#     ports:
+#       - "6379:6379"
+#     networks:
+#       - weather_network
+#     restart: always
+#     volumes:
+#       - redis_data:/data
+#     healthcheck:
+#       test: ["CMD", "redis-cli", "ping"]
+#       interval: 15s
+#       timeout: 5s
+#       retries: 3
+#       start_period: 10s
+
+#   redis_exporter:
+#     image: oliver006/redis_exporter:latest
+#     ports:
+#       - "9121:9121"
+#     environment:
+#       - REDIS_ADDR=redis://redis:6379
+#     depends_on:
+#       redis:
+#         condition: service_healthy
+#     networks:
+#       - weather_network
+#     restart: always
+
+#   prometheus:
+#     image: prom/prometheus:latest
+#     ports:
+#       - "9090:9090"
+#     volumes:
+#       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+#       - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml
+#       - prometheus_data:/prometheus
+#     command:
+#       - "--config.file=/etc/prometheus/prometheus.yml"
+#       - "--web.enable-lifecycle"
+#       - "--storage.tsdb.path=/prometheus"
+#     networks:
+#       - weather_network
+#     restart: always
+#     healthcheck:
+#       test: ["CMD", "wget", "--spider", "http://localhost:9090/-/healthy"]
+#       interval: 30s
+#       timeout: 10s
+
+#   grafana:
+#     image: grafana/grafana
+#     container_name: grafana
+#     ports:
+#       - "3000:3000"
+#     volumes:
+#       - grafana_data:/var/lib/grafana
+#       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+#       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+#     depends_on:
+#       prometheus:
+#         condition: service_healthy
+#     networks:
+#       - weather_network
+#     restart: always
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+#       interval: 30s
+#       timeout: 5s
+
+#   backup:
+#     build:
+#       context: .
+#       dockerfile: infrastructure/backup.Dockerfile  # Path to your custom Dockerfile
+#     volumes:
+#       - ./infrastructure/scripts:/scripts
+#       - backup_data:/backups
+#     environment:
+#       - POSTGRES_USER=admin
+#       - POSTGRES_PASSWORD=1234
+#       - POSTGRES_DB=weather
+#       - POSTGRES_HOST=postgres
+#     networks:
+#       - weather_network
+#     restart: unless-stopped
+
+# volumes:
+#   postgres_data:
+#   grafana_data:
+#   prometheus_data:
+#   redis_data:
+#   backup_data:
+
+# networks:
+#   weather_network:
+#     driver: bridge
+
+
+
+
+
+
+
+# version: '3.8'
+
+# services:
+#   postgres:
+#     image: postgres:latest
+#     container_name: postgres
+#     environment:
+#       - POSTGRES_USER=admin
+#       - POSTGRES_PASSWORD=1234
+#       - POSTGRES_DB=weather
+#     ports:
+#       - "5432:5432"
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+#     networks:
+#       - weather_network
+#     restart: always
+
+#   backend:
+#     build: 
+#       context: .
+#       dockerfile: backend/Dockerfile
+#     environment:
+#       - DATABASE_URL=postgresql+psycopg2://admin:1234@postgres:5432/weather
+#       - REDIS_URL=redis://redis:6379
+#       - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}
+#       - SECRET_KEY=${SECRET_KEY}
+#       - ALGORITHM=${ALGORITHM}
+#     ports:
+#       - "8000:8000"
+#     depends_on:
+#       - postgres  
+#       - redis
+#     networks:
+#       - weather_network
+#     restart: always
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://backend:8000/health"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#       start_period: 60s
+
+#   frontend:
+#     build:
+#       context: ./backend
+#       dockerfile: frontend/Dockerfile
+#     environment:
+#       - BACKEND_URL=http://backend:8000
+#     ports:
+#       - "8501:8501"
+#     depends_on:
+#       - backend
+#     networks:
+#       - weather_network
+#     restart: always
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://frontend:8501"]
+#       interval: 30s
+#       timeout: 10s
+#       retries: 3
+#       start_period: 60s
+
+#   redis:
+#     image: redis:alpine
+#     container_name: redis
+#     ports:
+#       - "6379:6379"
+#     networks:
+#       - weather_network
+#     restart: always
+#     volumes:
+#       - redis_data:/data
+#     healthcheck:
+#       test: ["CMD", "redis-cli", "ping"]
+#       interval: 15s
+#       timeout: 5s
+#       retries: 3
+#       start_period: 10s
+
+#   redis_exporter:
+#     image: oliver006/redis_exporter:latest
+#     ports:
+#       - "9121:9121"
+#     environment:
+#       - REDIS_ADDR=redis://redis:6379
+#     depends_on:
+#       redis:
+#         condition: service_healthy
+#     networks:
+#       - weather_network
+#     restart: always
+
+#   prometheus:
+#     image: prom/prometheus:latest
+#     ports:
+#       - "9090:9090"
+#     volumes:
+#       - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+#       - ./monitoring/prometheus/alerts.yml:/etc/prometheus/alerts.yml
+#       - prometheus_data:/prometheus
+#     command:
+#       - "--config.file=/etc/prometheus/prometheus.yml"
+#       - "--web.enable-lifecycle"
+#       - "--storage.tsdb.path=/prometheus"
+#     networks:
+#       - weather_network
+#     restart: always
+#     healthcheck:
+#       test: ["CMD", "wget", "--spider", "http://localhost:9090/-/healthy"]
+#       interval: 30s
+#       timeout: 10s
+
+#   grafana:
+#     image: grafana/grafana
+#     container_name: grafana
+#     ports:
+#       - "3000:3000"
+#     volumes:
+#       - grafana_data:/var/lib/grafana
+#       - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+#       - ./monitoring/grafana/provisioning:/etc/grafana/provisioning
+#     depends_on:
+#       prometheus:
+#         condition: service_healthy
+#     networks:
+#       - weather_network
+#     restart: always
+#     healthcheck:
+#       test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+#       interval: 30s
+#       timeout: 5s
+#   backup:
+#     build:
+#       context: .
+#       dockerfile: infrastructure/backup.Dockerfile
+#     volumes:
+#       - ./infrastructure/scripts:/scripts
+#       - backup_data:/backups
+#     environment:
+#       - POSTGRES_USER=admin
+#       - POSTGRES_PASSWORD=1234
+#       - POSTGRES_DB=weather
+#       - POSTGRES_HOST=postgres
+#     networks:
+#       - weather_network
+#     depends_on:
+#       - postgres
+#     restart: unless-stopped
+# volumes:
+#   postgres_data:
+#   grafana_data:
+#   prometheus_data:
+#   redis_data:
+#   backup_data:
+
+# networks:
+#   weather_network:
+#     driver: bridge
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+version: '3.8'
 
 services:
+  postgres:
+    image: postgres:14-alpine
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=1234
+      - POSTGRES_DB=weather
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - weather_network
+    restart: always
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d weather"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
   backend:
     build: 
       context: .
       dockerfile: backend/Dockerfile
     environment:
-      - DATABASE_URL=sqlite:///./weather.db
+      - DATABASE_URL=postgresql+psycopg2://admin:1234@postgres:5432/weather
       - REDIS_URL=redis://redis:6379
       - OPENWEATHER_API_KEY=${OPENWEATHER_API_KEY}
       - SECRET_KEY=${SECRET_KEY}
       - ALGORITHM=${ALGORITHM}
     ports:
       - "8000:8000"
-    volumes:
-      - ./backend/weather.db:/app/weather.db
     depends_on:
-      redis:
-        condition: service_healthy
+      - postgres  
+      - redis
     networks:
       - weather_network
     restart: always
@@ -272,12 +557,14 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s  # Increased start period
+      start_period: 60s
 
   frontend:
     build:
       context: ./backend
       dockerfile: frontend/Dockerfile
+    environment:
+      - BACKEND_URL=http://backend:8000
     ports:
       - "8501:8501"
     depends_on:
@@ -290,10 +577,11 @@ services:
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s  # Added health check for frontend
+      start_period: 60s
 
   redis:
     image: redis:alpine
+    container_name: redis
     ports:
       - "6379:6379"
     networks:
@@ -361,17 +649,28 @@ services:
       interval: 30s
       timeout: 5s
 
+  
   backup:
-    image: alpine
+    build:
+      context: .
+      dockerfile: infrastructure/backup.Dockerfile
     volumes:
-      - ./infrastructure/scripts:/scripts
-      - backup_data:/backups
-    command: sh -c "echo '0 3 * * * /scripts/backup_restore.sh backup sqlite' | crontab - && crond -f"
+      - ./backups:/backups  # Changed from backup_data to host-mounted volume
+    environment:
+      - POSTGRES_USER=admin
+      - POSTGRES_PASSWORD=1234
+      - POSTGRES_DB=weather
+      - POSTGRES_HOST=postgres
     networks:
       - weather_network
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
+# Remove backup_data from volumes section
 volumes:
+  postgres_data:
   grafana_data:
   prometheus_data:
   redis_data:

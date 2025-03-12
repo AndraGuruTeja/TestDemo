@@ -22,6 +22,8 @@ from .data import generate_history, generate_fake_weather_data
 from .models import WeatherRecord, User, Base
 import os
 from prometheus_fastapi_instrumentator import Instrumentator
+from app.database import engine
+from app.models import Base, User, WeatherRecord
 
 # Load environment variables
 load_dotenv()
@@ -64,6 +66,8 @@ redis = None
 # Rate limiting setup
 @app.on_event("startup")
 async def startup():
+    Base.metadata.create_all(bind=engine)
+    print("Database tables created successfully!")
     global redis
     redis = await aioredis.from_url(settings.REDIS_URL)
     await FastAPILimiter.init(redis)
@@ -320,16 +324,32 @@ async def get_trends(
     generate_history(db=db, city=city, days=days, user_id=current_user.id)
     
     trends = db.query(
-        func.strftime("%Y-%m-%d", WeatherRecord.timestamp).label("date"),
-        func.avg(WeatherRecord.temperature).label("avg_temp"),
-        func.max(WeatherRecord.temperature).label("max_temp"),
-        func.min(WeatherRecord.temperature).label("min_temp"),
-        func.avg(WeatherRecord.humidity).label("avg_humidity")
-    ).filter(
-        WeatherRecord.city == city,
-        WeatherRecord.user_id == current_user.id,
-        WeatherRecord.timestamp >= datetime.utcnow() - timedelta(days=days)
-    ).group_by("date").all()
+    func.to_char(WeatherRecord.timestamp, 'YYYY-MM-DD').label("date"),
+    func.avg(WeatherRecord.temperature).label("avg_temp"),
+    func.max(WeatherRecord.temperature).label("max_temp"),
+    func.min(WeatherRecord.temperature).label("min_temp"),
+    func.avg(WeatherRecord.humidity).label("avg_humidity")
+).filter(
+    WeatherRecord.city == city,
+    WeatherRecord.user_id == current_user.id,
+    WeatherRecord.timestamp >= datetime.utcnow() - timedelta(days=days)
+).group_by(text("date")).all()
+
+
+
+
+
+    # trends = db.query(
+    #     func.strftime("%Y-%m-%d", WeatherRecord.timestamp).label("date"),
+    #     func.avg(WeatherRecord.temperature).label("avg_temp"),
+    #     func.max(WeatherRecord.temperature).label("max_temp"),
+    #     func.min(WeatherRecord.temperature).label("min_temp"),
+    #     func.avg(WeatherRecord.humidity).label("avg_humidity")
+    # ).filter(
+    #     WeatherRecord.city == city,
+    #     WeatherRecord.user_id == current_user.id,
+    #     WeatherRecord.timestamp >= datetime.utcnow() - timedelta(days=days)
+    # ).group_by("date").all()
     
     trends_response = [{
         "date": trend.date,

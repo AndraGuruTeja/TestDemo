@@ -4,11 +4,16 @@ import pandas as pd
 import plotly.express as px
 import time
 from datetime import datetime
+import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # FastAPI backend URL
-BACKEND_URL = "http://backend:8000"  # Use the 'backend' service name from docker-compose.yml
+# BACKEND_URL = "http://backend:8000"  # Use the 'backend' service name from docker-compose.yml
 
-
+BACKEND_URL = os.getenv("BACKEND_URL", "http://backend:8000")
 # Session state to manage user authentication
 if 'token' not in st.session_state:
     st.session_state['token'] = None
@@ -23,8 +28,10 @@ if 'username' not in st.session_state:
 def login(username, password):
     response = requests.post(
         f"{BACKEND_URL}/token",
+
         data={"username": username, "password": password}
     )
+                    
     if response.status_code == 200:
         st.session_state['token'] = response.json()['access_token']
         st.session_state['page'] = 'weather'

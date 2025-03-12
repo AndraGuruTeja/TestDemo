@@ -1,0 +1,2 @@
+# /etc/cron.d/backup-cron
+0 2 * * * . /etc/environment; /scripts/backup_restore.sh backup >> /var/log/cron.log 2>&1
