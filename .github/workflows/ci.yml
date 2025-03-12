@@ -252,7 +252,6 @@
 
 
 
-
 name: Full CI/CD Pipeline
 
 on:
@@ -296,8 +295,6 @@ jobs:
         pip install -r backend/requirements.txt
         pip install pytest locust httpx pytest-asyncio psycopg2-binary
 
-   
-
     - name: Run unit tests
       run: pytest backend/tests/ -v
       env:
@@ -310,7 +307,8 @@ jobs:
 
     - name: Start backend service
       run: |
-        uvicorn backend.main:app --host 0.0.0.0 --port 8000 &
+        export PYTHONPATH=$PYTHONPATH:$(pwd)/backend
+        uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload &
       env:
         DATABASE_URL: "postgresql+psycopg2://admin:1234@localhost:5432/weather"
         REDIS_URL: "redis://localhost:6379"
