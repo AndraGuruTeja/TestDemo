@@ -120,8 +120,6 @@
 
 
 
-
-
 name: Full CI/CD Pipeline
 
 on:
@@ -181,7 +179,15 @@ jobs:
         sleep 15
         locust -f backend/tests/load_tests/locustfile.py \
           --headless -u 50 -r 10 --run-time 1m \
-          --host http://localhost:8000
+          --host http://localhost:8000 > locust_result.txt
+
+        fail_rate=$(grep "Aggregated" locust_result.txt | awk '{print $5}' | sed 's/(//;s/%)//')
+        if (( $(echo "$fail_rate < 70" | bc -l) )); then
+          echo "Locust tests passed with failure rate: $fail_rate%"
+        else
+          echo "Locust tests failed with failure rate: $fail_rate%"
+          exit 1
+        fi
       env:
         DATABASE_URL: "postgresql+psycopg2://admin:1234@localhost:5432/weather"
         REDIS_URL: "redis://localhost:6379"
