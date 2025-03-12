@@ -313,13 +313,7 @@ jobs:
         DATABASE_URL: "postgresql+psycopg2://admin:1234@localhost:5432/weather"
         REDIS_URL: "redis://localhost:6379"
 
-    - name: Wait for backend to be ready
-      run: |
-        until curl --output /dev/null --silent --head --fail http://localhost:8000/health; do
-          echo "Waiting for backend..."
-          sleep 2
-        done
-
+   
     - name: Run load tests
       run: |
         locust -f backend/tests/load_tests/locustfile.py \
