@@ -80,7 +80,7 @@ import random
 import uuid
 import threading
 
-MAX_EXECUTIONS = 100  # Total allowed requests
+MAX_EXECUTIONS = 25 # Total allowed requests
 execution_lock = threading.Lock()  # Prevent race conditions
 execution_count = 0  # Track total executions across all users
 
