@@ -250,8 +250,6 @@
 
 
 
-
-
 name: Full CI/CD Pipeline
 
 on:
@@ -308,19 +306,17 @@ jobs:
     - name: Start backend service
       run: |
         export PYTHONPATH=$PYTHONPATH:$(pwd)/backend
+        sleep 10  # Ensure PostgreSQL & Redis are ready
         uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload &
       env:
         DATABASE_URL: "postgresql+psycopg2://admin:1234@localhost:5432/weather"
         REDIS_URL: "redis://localhost:6379"
 
-   
     - name: Run load tests
       run: |
         locust -f backend/tests/load_tests/locustfile.py \
           --headless -u 5 -r 10 --run-time 10s \
           --host http://localhost:8000 > locust_result.txt
-
-       
       env:
         DATABASE_URL: "postgresql+psycopg2://admin:1234@localhost:5432/weather"
         REDIS_URL: "redis://localhost:6379"
@@ -334,7 +330,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Install PostgreSQL client
         run: sudo apt-get update && sudo apt-get install -y postgresql-client
@@ -347,7 +343,7 @@ jobs:
           PGPASSWORD: "1234"
 
       - name: Upload backup artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: db-backups
           path: backups/
@@ -357,7 +353,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Set up Docker
         run: |
@@ -371,7 +367,6 @@ jobs:
         run: |
           docker-compose ps
           docker-compose logs --tail=50
-
 
       - name: Cleanup
         if: always()
